@@ -18,6 +18,7 @@ const app = express();
 app.use(express.json());
 app.use(cookieParser());
 
+// ✅ FIXED CORS (no wildcard *)
 app.use(
   cors({
     origin: process.env.CLIENT_URL,
@@ -27,12 +28,14 @@ app.use(
   })
 );
 
-app.options("*", cors());
+// ❌ REMOVE THIS — It breaks Render deploy
+// app.options("*", cors());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/users", userRoutes);
 
+// DB CONNECT
 connectDB(process.env.MONGO_URI);
 
 const server = http.createServer(app);
@@ -51,13 +54,11 @@ io.on("connection", (socket) => {
     socket.data.userId = userId;
   });
 
-  // Join chat room
   socket.on("joinRoom", ({ userId1, userId2 }) => {
     const room = [userId1, userId2].sort().join("_");
     socket.join(room);
   });
 
-  // SEND MESSAGE
   socket.on("privateMessage", async ({ sender, receiver, text, replyTo }) => {
     try {
       const room = [sender, receiver].sort().join("_");
@@ -82,7 +83,6 @@ io.on("connection", (socket) => {
     }
   });
 
-  // MARK AS SEEN
   socket.on("markAsSeen", async ({ sender, receiver }) => {
     try {
       const room = [sender, receiver].sort().join("_");
@@ -102,7 +102,6 @@ io.on("connection", (socket) => {
     }
   });
 
-  // ⭐ DELETE MESSAGE (For Me / For Everyone)
   socket.on("deleteMessage", async ({ messageId, userId, forEveryone }) => {
     try {
       const msg = await Message.findById(messageId);
@@ -110,7 +109,7 @@ io.on("connection", (socket) => {
 
       const room = msg.conversationId;
 
-      // ❌ DELETE FOR EVERYONE
+      // DELETE FOR EVERYONE
       if (forEveryone) {
         msg.text = "";
         msg.deletedForEveryone = true;
@@ -120,11 +119,10 @@ io.on("connection", (socket) => {
           messageId,
           forEveryone: true,
         });
-
         return;
       }
 
-      // 👁 DELETE ONLY FOR ME
+      // DELETE FOR ME ONLY
       if (!msg.deletedFor.includes(userId)) msg.deletedFor.push(userId);
       await msg.save();
 
