@@ -19,7 +19,7 @@ app.use(cookieParser());
 
 const ALLOWED_ORIGINS = [
   "http://localhost:5173",
-  /\.vercel\.app$/,
+  "https://chat-aj-one.vercel.app"
 ];
 
 app.use(
