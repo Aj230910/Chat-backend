@@ -12,66 +12,62 @@ import userRoutes from "./routes/users.js";
 import Message from "./models/Message.js";
 
 dotenv.config();
-
 const app = express();
 
 app.use(express.json());
 app.use(cookieParser());
 
-// ⭐ CORS FIXED FOR RENDER + VERCEL
+// ⭐ FIXED CORS
 app.use(
   cors({
     origin: [
       "http://localhost:5173",
-      "https://chat-frontend-three-blue.vercel.app",
-      process.env.CLIENT_URL,
+      "https://chat-frontend-three-blue.vercel.app"
     ],
     credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
-// Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/users", userRoutes);
 
-// DB
 connectDB(process.env.MONGO_URI);
 
 const server = http.createServer(app);
 
-// SOCKET
+// ⭐ Socket Config
 const io = new Server(server, {
   cors: {
     origin: [
       "http://localhost:5173",
-      "https://chat-frontend-three-blue.vercel.app",
-      process.env.CLIENT_URL,
+      "https://chat-frontend-three-blue.vercel.app"
     ],
-    methods: ["GET", "POST"],
-  },
+    methods: ["GET", "POST"]
+  }
 });
 
 io.on("connection", (socket) => {
-  console.log("⚡ Connected:", socket.id);
+  console.log("⚡ User Connected:", socket.id);
 
   socket.on("userConnected", (userId) => {
     socket.data.userId = userId;
   });
 
-  // JOIN ROOM
   socket.on("joinRoom", ({ userId1, userId2 }) => {
     const room = [userId1, userId2].sort().join("_");
     socket.join(room);
   });
 
-  // SEND MESSAGE
+  // ⭐ FIXED PRIVATE MESSAGE
   socket.on("privateMessage", async (data) => {
     try {
       const { sender, receiver, text } = data;
 
       if (!sender || !receiver) {
-        console.log("❌ Missing IDs");
+        console.log("❌ Missing sender/receiver", data);
         return;
       }
 
@@ -86,14 +82,19 @@ io.on("connection", (socket) => {
       });
 
       io.to(room).emit("newMessage", msg);
+
     } catch (err) {
-      console.log("❌ Message Error:", err);
+      console.log("❌ Message Save Error:", err);
     }
+  });
+
+  socket.on("disconnect", () => {
+    console.log("❌ Disconnected:", socket.id);
   });
 });
 
 const PORT = process.env.PORT || 10000;
 
-server.listen(PORT, "0.0.0.0", () => {
-  console.log("🚀 Server running on port", PORT);
+server.listen(PORT, () => {
+  console.log(`🚀 Backend running on PORT ${PORT}`);
 });
