@@ -19,16 +19,24 @@ app.use(cookieParser());
 
 const ALLOWED_ORIGINS = [
   "http://localhost:5173",
-
-  // ⭐ YOUR VERCEL DOMAINS
-  "https://chat-aj-one.vercel.app",
-  "https://chat-aj-git-main-ambrishs-projects-f897f3d5.vercel.app",
-  "https://chat-iuf0zwcte-ambrishs-projects-f897f3d5.vercel.app"
+  /\.vercel\.app$/,
 ];
 
 app.use(
   cors({
-    origin: ALLOWED_ORIGINS,
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+
+      if (
+        ALLOWED_ORIGINS.includes(origin) ||
+        /\.vercel\.app$/.test(origin)
+      ) {
+        callback(null, true);
+      } else {
+        console.log("❌ BLOCKED ORIGIN:", origin);
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"]
@@ -43,10 +51,21 @@ connectDB(process.env.MONGO_URI);
 
 const server = http.createServer(app);
 
-// ⭐ SOCKET CORS FIX
 const io = new Server(server, {
   cors: {
-    origin: ALLOWED_ORIGINS,
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+
+      if (
+        ALLOWED_ORIGINS.includes(origin) ||
+        /\.vercel\.app$/.test(origin)
+      ) {
+        callback(null, true);
+      } else {
+        console.log("❌ BLOCKED SOCKET ORIGIN:", origin);
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     methods: ["GET", "POST"]
   }
 });
@@ -63,7 +82,6 @@ io.on("connection", (socket) => {
     socket.join(room);
   });
 
-  // ⭐ SAVE MESSAGE
   socket.on("privateMessage", async ({ sender, receiver, text }) => {
     try {
       if (!sender || !receiver || !text?.trim()) return;
