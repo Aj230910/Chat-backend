@@ -21,9 +21,9 @@ const ALLOWED_ORIGINS = [
   "http://localhost:5173",
 
   // ⭐ YOUR VERCEL DOMAINS
-  "https://chat-frontend-three-blue.vercel.app",
-  "https://chat-frontend-git-main-ambrishs-projects-f897f3d5.vercel.app",
-  "https://chat-frontend-brr7xu7vy-ambrishs-projects-f897f3d5.vercel.app"
+  "https://chat-aj-one.vercel.app",
+  "https://chat-aj-git-main-ambrishs-projects-f897f3d5.vercel.app",
+  "https://chat-iuf0zwcte-ambrishs-projects-f897f3d5.vercel.app"
 ];
 
 app.use(
