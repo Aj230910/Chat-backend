@@ -17,16 +17,21 @@ const app = express();
 app.use(express.json());
 app.use(cookieParser());
 
-// ⭐ FIXED CORS
+const ALLOWED_ORIGINS = [
+  "http://localhost:5173",
+
+  // ⭐ YOUR VERCEL DOMAINS
+  "https://chat-frontend-three-blue.vercel.app",
+  "https://chat-frontend-git-main-ambrishs-projects-f897f3d5.vercel.app",
+  "https://chat-frontend-brr7xu7vy-ambrishs-projects-f897f3d5.vercel.app"
+];
+
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173",
-      "https://chat-frontend-three-blue.vercel.app"
-    ],
+    origin: ALLOWED_ORIGINS,
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: ["Content-Type", "Authorization"]
   })
 );
 
@@ -38,13 +43,10 @@ connectDB(process.env.MONGO_URI);
 
 const server = http.createServer(app);
 
-// ⭐ Socket Config
+// ⭐ SOCKET CORS FIX
 const io = new Server(server, {
   cors: {
-    origin: [
-      "http://localhost:5173",
-      "https://chat-frontend-three-blue.vercel.app"
-    ],
+    origin: ALLOWED_ORIGINS,
     methods: ["GET", "POST"]
   }
 });
@@ -61,15 +63,10 @@ io.on("connection", (socket) => {
     socket.join(room);
   });
 
-  // ⭐ FIXED PRIVATE MESSAGE
-  socket.on("privateMessage", async (data) => {
+  // ⭐ SAVE MESSAGE
+  socket.on("privateMessage", async ({ sender, receiver, text }) => {
     try {
-      const { sender, receiver, text } = data;
-
-      if (!sender || !receiver) {
-        console.log("❌ Missing sender/receiver", data);
-        return;
-      }
+      if (!sender || !receiver || !text?.trim()) return;
 
       const room = [sender, receiver].sort().join("_");
 
@@ -78,7 +75,7 @@ io.on("connection", (socket) => {
         sender,
         receiver,
         text,
-        status: "delivered",
+        status: "delivered"
       });
 
       io.to(room).emit("newMessage", msg);
